@@ -1,0 +1,26 @@
+spring:
+  mail:
+    host: ${MAIL_HOST:mailpit}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+mail:
+  from: ${MAIL_FROM:noreply@local.test}
+
+camunda:
+  rest:
+    base-url: ${CAMUNDA_REST_BASE_URL:http://camunda:8080/engine-rest}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+process:
+  key: demo
+
+defaults:
+  kc_token_url: ${KC_TOKEN_URL:https://circuloos-platform.eurodyn.com/idm/realms/fiware-server/protocol/openid-connect/token}
+  kc_client_id: ${KC_CLIENT_ID:orion-pep}
+  kc_client_secret: ${KC_CLIENT_SECRET:changeme}
+  orion_base_url: ${ORION_BASE_URL:https://circuloos-platform.eurodyn.com/kong/keycloak-orion}

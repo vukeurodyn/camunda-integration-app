@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_1i0fvzx" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.40.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.24.0">
+  <bpmn:process id="demo" name="demo" isExecutable="true" camunda:historyTimeToLive="P1D">
+    <bpmn:startEvent id="StartEvent_1" name="Start Process">
+      <bpmn:outgoing>Flow_0wwpur2</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0wwpur2" sourceRef="StartEvent_1" targetRef="Activity_05u282l" />
+    <bpmn:endEvent id="Event_0mjtdrg" name="End Process">
+      <bpmn:incoming>Flow_027qu61</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Activity_05u282l" name="Get keycloak token">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="method">POST</camunda:inputParameter>
+            <camunda:inputParameter name="url">https://circuloos-platform.eurodyn.com/idm/realms/fiware-server/protocol/openid-connect/token</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="Content-Type">application/x-www-form-urlencoded</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:inputParameter name="payload">grant_type=client_credentials&amp;client_id=orion-pep&amp;client_secret=yWv2aRCm3KKMGrj9lMXQcEXY4v80tcFk&amp;username=test-circuloos&amp;password=2UnGRKm7NW8Wxa9Z3N</camunda:inputParameter>
+            <camunda:outputParameter name="accessToken">${S(response).prop("access_token").stringValue()}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0wwpur2</bpmn:incoming>
+      <bpmn:outgoing>Flow_0o6tohh</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_0t2kok5" name="Fetch data from Orion-Ld">
+      <bpmn:extensionElements>
+        <camunda:connector>
+          <camunda:inputOutput>
+            <camunda:inputParameter name="method">GET</camunda:inputParameter>
+            <camunda:inputParameter name="url">https://circuloos-platform.eurodyn.com/kong/keycloak-orion/ngsi-ld/v1/entities/urn:ngsi-ld:circuloos:demo_1:ieq-001</camunda:inputParameter>
+            <camunda:inputParameter name="headers">
+              <camunda:map>
+                <camunda:entry key="NGSILD-Tenant">circuloos_demo</camunda:entry>
+                <camunda:entry key="NGSILD-Path">/</camunda:entry>
+                <camunda:entry key="Link">&lt;http://circuloos-ld-context/circuloos-context.jsonld&gt;; rel="http://www.w3.org/ns/json-ld#context"; type="application/ld+json"</camunda:entry>
+                <camunda:entry key="Accept">application/ld+json</camunda:entry>
+                <camunda:entry key="Authorization">Bearer ${accessToken}</camunda:entry>
+              </camunda:map>
+            </camunda:inputParameter>
+            <camunda:outputParameter name="sensorType">${S(response).prop("type").stringValue()}</camunda:outputParameter>
+            <camunda:outputParameter name="sensorId">${S(response).prop("id").stringValue()}</camunda:outputParameter>
+          </camunda:inputOutput>
+          <camunda:connectorId>http-connector</camunda:connectorId>
+        </camunda:connector>
+        <camunda:inputOutput>
+          <camunda:outputParameter name="sensorType">${sensorType}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0o6tohh</bpmn:incoming>
+      <bpmn:outgoing>Flow_0i7cje0</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0o6tohh" sourceRef="Activity_05u282l" targetRef="Activity_0t2kok5" />
+    <bpmn:userTask id="ReviewPrefilledForm" name="Review Prefilled Form">
+      <bpmn:extensionElements>
+        <camunda:formData />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0uqnsn9</bpmn:incoming>
+      <bpmn:outgoing>Flow_1om4gx9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="SendReviewEmail" name="Send Email to Reviewer" camunda:type="external" camunda:topic="send-review-email">
+      <bpmn:extensionElements>
+        <camunda:properties>
+          <camunda:property name="Implementation" value="External" />
+          <camunda:property name="Topic" value="send-review-email" />
+        </camunda:properties>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1pg1wf4</bpmn:incoming>
+      <bpmn:outgoing>Flow_1hsvj44</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gateway_1cigg47">
+      <bpmn:incoming>Flow_1hsvj44</bpmn:incoming>
+      <bpmn:incoming>Flow_1om4gx9</bpmn:incoming>
+      <bpmn:outgoing>Flow_027qu61</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_027qu61" sourceRef="Gateway_1cigg47" targetRef="Event_0mjtdrg" />
+    <bpmn:sequenceFlow id="Flow_1hsvj44" sourceRef="SendReviewEmail" targetRef="Gateway_1cigg47" />
+    <bpmn:sequenceFlow id="Flow_1om4gx9" sourceRef="ReviewPrefilledForm" targetRef="Gateway_1cigg47" />
+    <bpmn:parallelGateway id="Gateway_12jeytw">
+      <bpmn:incoming>Flow_0i7cje0</bpmn:incoming>
+      <bpmn:outgoing>Flow_1pg1wf4</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0uqnsn9</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_1pg1wf4" sourceRef="Gateway_12jeytw" targetRef="SendReviewEmail" />
+    <bpmn:sequenceFlow id="Flow_0uqnsn9" sourceRef="Gateway_12jeytw" targetRef="ReviewPrefilledForm" />
+    <bpmn:sequenceFlow id="Flow_0i7cje0" sourceRef="Activity_0t2kok5" targetRef="Gateway_12jeytw" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="demo">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="182" y="172" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="167" y="215" width="67" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0waao75_di" bpmnElement="Activity_05u282l">
+        <dc:Bounds x="270" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1w8zzox_di" bpmnElement="Activity_0t2kok5">
+        <dc:Bounds x="420" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_12jeytw_di" bpmnElement="Gateway_12jeytw">
+        <dc:Bounds x="565" y="165" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0mjtdrg_di" bpmnElement="Event_0mjtdrg">
+        <dc:Bounds x="932" y="172" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="919" y="215" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1k87nqz_di" bpmnElement="ReviewPrefilledForm">
+        <dc:Bounds x="650" y="80" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0mgs8xt_di" bpmnElement="SendReviewEmail">
+        <dc:Bounds x="650" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1cigg47_di" bpmnElement="Gateway_1cigg47">
+        <dc:Bounds x="785" y="165" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0wwpur2_di" bpmnElement="Flow_0wwpur2">
+        <di:waypoint x="218" y="190" />
+        <di:waypoint x="270" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0o6tohh_di" bpmnElement="Flow_0o6tohh">
+        <di:waypoint x="370" y="190" />
+        <di:waypoint x="420" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0i7cje0_di" bpmnElement="Flow_0i7cje0">
+        <di:waypoint x="520" y="190" />
+        <di:waypoint x="565" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0uqnsn9_di" bpmnElement="Flow_0uqnsn9">
+        <di:waypoint x="590" y="165" />
+        <di:waypoint x="590" y="120" />
+        <di:waypoint x="650" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pg1wf4_di" bpmnElement="Flow_1pg1wf4">
+        <di:waypoint x="590" y="215" />
+        <di:waypoint x="590" y="260" />
+        <di:waypoint x="650" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_027qu61_di" bpmnElement="Flow_027qu61">
+        <di:waypoint x="835" y="190" />
+        <di:waypoint x="932" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1om4gx9_di" bpmnElement="Flow_1om4gx9">
+        <di:waypoint x="750" y="120" />
+        <di:waypoint x="810" y="120" />
+        <di:waypoint x="810" y="165" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1hsvj44_di" bpmnElement="Flow_1hsvj44">
+        <di:waypoint x="750" y="260" />
+        <di:waypoint x="810" y="260" />
+        <di:waypoint x="810" y="215" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
