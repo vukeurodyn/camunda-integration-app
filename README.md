@@ -47,7 +47,7 @@ See diagram in: `src/main/resources/docs/architecture_camunda.md`
 ```bash
 # Clone the repository
 git clone https://github.com/vukeurodyn/camunda-integration-app.git
-cd demo
+cd camunda-integration-app
 
 # Start all services using Docker Compose
 docker compose up --build -d
