@@ -31,7 +31,7 @@ See diagram in: `src/main/resources/docs/architecture_camunda.md`
 | User Task UI | Camunda Tasklist | Form interaction |
 | Worker | Spring Boot External Task Worker | Executes service tasks |
 | Auth | Keycloak | OAuth2 token provider |
-| Data Platform | Circuloos / Orion-LD | Entity data retrieval |
+| Data Platform | Circuloos Data Platform | Entity data retrieval |
 | Notification | Mailpit SMTP | Local email delivery |
 | User | Email client + Task UI | Approves/handles tasks |
 
@@ -43,20 +43,115 @@ See diagram in: `src/main/resources/docs/architecture_camunda.md`
 - Maven or Gradle
 
 ###  Running
+
 ```bash
-git clone https://github.com/your-org/your-repo.git
-cd your-repo
+# Clone the repository
+git clone https://github.com/vukeurodyn/camunda-integration-app.git
+cd demo
+
+# Start all services using Docker Compose
+docker compose up --build -d
 ```
-docker run -p 8025:8025 -p 1025:1025 axllent/mailpit
-docker run -d --name camunda -p 9090:9090 camunda/camunda-bpm-platform:latest
-### Directory Structure
+
+### Accessing Services
+
+Once all containers are running, you can access:
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Camunda Cockpit | http://localhost:9091/camunda | demo / demo |
+| Camunda Tasklist | http://localhost:9091/camunda/app/tasklist | demo / demo |
+| Mailpit Web UI | http://localhost:8025 | - |
+
+### Configuration
+
+The application expects the following environment variables (or `application.yml` configuration):
+
+```yaml
+# Camunda
+camunda.bpm.client.base-url: http://localhost:9091/engine-rest
+
+# Mail (Mailpit SMTP)
+spring.mail.host: localhost
+spring.mail.port: 1025
+spring.mail.username: 
+spring.mail.password:
+```
+
+### Deploying the BPMN Process
+
+1. Open **Camunda Modeler**
+2. Load `src/main/resources/bpmn/demo.bpmn`
+3. Click **Deploy**
+
+### Starting a Process Instance
+
+Go to Camunda Tasklist at **http://localhost:9091/camunda/app/tasklist** and start an instance named _"demo"_.
+
+### Viewing Emails
+
+All emails sent during the workflow can be viewed at: **http://localhost:8025**
+
+### Stopping Services
+
+```bash
+docker compose down
+```
+
+To remove all data:
+```bash
+docker compose down -v
+```
+
+## Directory Structure
 
 ```
-├── resources/
-│   ├── docs/
-│   │   └── architecture_camunda.md
-│   └── bpmn/
-│       ├── demo.bpmn
-│       └── review.form
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/camunda_integration/
+│   │   │       ├── DemoApplication.java
+│   │   │       ├── CamundaRestClient.java
+│   │   │       ├── ProcessStarterService.java
+│   │   │       ├── api/
+│   │   │       │   ├── ProcessController.java
+│   │   │       │   └── StartRequest.record
+│   │   │       ├── vars/
+│   │   │       │   └── CamundaVars.java
+│   │   │       └── workers/
+│   │   │           └── ReviewEmailWorker.java
+│   │   └── resources/
+│   │       ├── application.yml
+│   │       ├── bpmn/
+│   │       │   ├── demo.bpmn
+│   │       │   └── review.form
+│   │       └── docs/
+│   │           └── architecture_camunda.md
+├── docker-compose.yml
+├── Dockerfile
+├── pom.xml
 └── README.md
 ```
+
+##  Troubleshooting
+
+### Camunda not accessible
+- Verify container is running: `docker ps | grep camunda`
+- Check logs: `docker logs camunda`
+
+### Keycloak authentication fails
+- Ensure realm and client are configured correctly
+- Verify client secret matches configuration
+
+### Emails not sent
+- Check Mailpit is running: `docker ps | grep mailpit`
+- Verify SMTP configuration points to port 1025
+
+### Worker not fetching tasks
+- Check worker is connected: Look for external task subscription logs
+- Verify Camunda REST API is accessible from worker
+
+##  License
+
+MIT License
+
