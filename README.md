@@ -1,42 +1,67 @@
-# Camunda External Task Workflow Example
-Integration of **Camunda 7**, **Spring Boot External Task Worker**, **Keycloak**, **Circuloos (Orion-LD)** and **Mailpit** for an event-driven human-workflow process.
-
+# CIRCULOOS Plastic Pilot
+This Spring Boot service implements the material-requirement and stock-validation logic used in the CIRCULOOS Plastic Pilot
 ##  Overview
-This project demonstrates an event-driven workflow using Camunda BPM with:
-- Secure token-based authentication (Keycloak)
-- External task execution (Spring Boot)
-- Data enrichment from Circuloos / Orion-LD
-- User task completion via Camunda Tasklist
-- Email-based human approval loop (Mailpit)
+It integrates with the Orion-LD Digital Twin to determine:
 
-##  Architecture
-See diagram in: `src/main/resources/docs/architecture_camunda.md`
+- How much material is required to manufacture a batch of plastic assemblies (e.g., washing-machine trays)
+- How many units can actually be produced based on current component stock
+- Whether production is possible or insufficient
+- Tasklist manages human tasks
+- Mailpit simulates notification emails
 
-### Workflow Summary
-1. BPMN deployed via Camunda Modeler
-2. Camunda Engine executes workflow → Tasklist UI
-3. Spring Boot worker fetches OAuth token from Keycloak
-4. Worker queries Circuloos Data Platform
-5. Task form is pre-filled in Tasklist
-6. Email sent via Mailpit to user
-7. User clicks link, completes task
-8. Workflow continues in Camunda
+It exposes two REST endpoints used by Camunda and by Postman for testing.
 
-##  Components
+## Endpoints Overview
 
-| Layer | Component | Purpose |
-|---|---|---|
-| BPMN Design | Camunda Modeler | Process authoring |
-| Workflow Engine | Camunda 7 | BPMN runtime |
-| User Task UI | Camunda Tasklist | Form interaction |
-| Worker | Spring Boot External Task Worker | Executes service tasks |
-| Auth | Keycloak | OAuth2 token provider |
-| Data Platform | Circuloos Data Platform | Entity data retrieval |
-| Notification | Mailpit SMTP | Local email delivery |
-| User | Email client + Task UI | Approves/handles tasks |
+Triggered by Camunda (Service Task 1).
+##  1. POST /api/material/calculate
+```bash
+{
+  "manufacturingMachineId": "urn:ngsi-ld:ManufacturingMachine:washingMachineTray:001",
+  "requiredUnits": 100
+}
+```
+What it does:
 
-##  Getting Started
+### 1. Fetches the ManufacturingMachine entity from Orion-LD
+- Uses header: ```NGSILD-Tenant: circuloos_demo```
+### 2. Reads
+- ```materialTotals``` (total kg per material for 1 tray)
+- ```hasComponent```(component IDs)
+### 3. Calulates required kg per material for the batch (unit x quantity)
+### 4. Stores
+- material requirements
+- component IDs
+- requested quantity into an internal cache using ```calculationId```
+### 5. returns minimal response to workflow
+```json 
+{
+  "calculationId": "74205606-c5f4-40b7-88d6-7b9964d9b0f8",
+  "machineId": "urn:ngsi-ld:ManufacturingMachine:washingMachineTray:001",
+  "requestedUnits": 100
+}
+```
+## 2. GET /api/material/validate?calcId=...
+Triggered by Camunda (Service Task 2).
 
+### 1. Loads previously stored calculation data (material requirements + component IDs)
+### 2. For each component
+- Fetches component DT from Orion-LD
+- Reads ``stocklevel, weight.value, hasMaterial.object``
+### 3. Converts component stock → material stock in kg, grouped by materialId
+### 4. Compares
+- ```availableKg``` vs ```requiredKg```
+### 5. Returns
+- whether enough material exists
+- max number of units that can be produced with current inventory
+
+Response example:
+```json
+{
+"sufficient": false,
+"maxProducibleUnits": 47
+}
+```
 ###  Requirements
 - Docker & Docker Compose
 - Java **17+**
@@ -57,12 +82,12 @@ docker compose up --build -d
 
 Once all containers are running, you can access:
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Camunda Cockpit | http://localhost:9091/camunda | demo / demo |
+| Service          | URL                                        | Credentials |
+|------------------|--------------------------------------------|-------------|
+| Camunda Cockpit  | http://localhost:9091/camunda              | demo / demo |
 | Camunda Tasklist | http://localhost:9091/camunda/app/tasklist | demo / demo |
-| Mailpit Web UI | http://localhost:8025 | - |
-
+| Mailpit Web UI   | http://localhost:8025                      | - |
+| worker           | http://localhost:9092                      | - |
 ### Configuration
 
 The application expects the following environment variables (or `application.yml` configuration):
@@ -81,8 +106,9 @@ spring.mail.password:
 ### Deploying the BPMN Process
 
 1. Open **Camunda Modeler**
-2. Load `src/main/resources/bpmn/demo.bpmn`
-3. Click **Deploy**
+2. Load `src/main/resources/bpmn/plastic_demo.bpmn`
+3. Include forms (or not) 
+4. Click **Deploy**
 
 ### Starting a Process Instance
 
@@ -101,36 +127,6 @@ docker compose down
 To remove all data:
 ```bash
 docker compose down -v
-```
-
-## Directory Structure
-
-```
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/camunda_integration/
-│   │   │       ├── DemoApplication.java
-│   │   │       ├── CamundaRestClient.java
-│   │   │       ├── ProcessStarterService.java
-│   │   │       ├── api/
-│   │   │       │   ├── ProcessController.java
-│   │   │       │   └── StartRequest.record
-│   │   │       ├── vars/
-│   │   │       │   └── CamundaVars.java
-│   │   │       └── workers/
-│   │   │           └── ReviewEmailWorker.java
-│   │   └── resources/
-│   │       ├── application.yml
-│   │       ├── bpmn/
-│   │       │   ├── demo.bpmn
-│   │       │   └── review.form
-│   │       └── docs/
-│   │           └── architecture_camunda.md
-├── docker-compose.yml
-├── Dockerfile
-├── pom.xml
-└── README.md
 ```
 
 ##  Troubleshooting
