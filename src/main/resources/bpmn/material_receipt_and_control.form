@@ -1,0 +1,59 @@
+{
+  "components": [
+    {
+      "label": "Material Id",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1lpbgaz",
+        "columns": null
+      },
+      "id": "Field_06f49v7",
+      "key": "material_id"
+    },
+    {
+      "label": "Sufficient",
+      "values": [
+        {
+          "label": "true",
+          "value": "true"
+        },
+        {
+          "label": "false",
+          "value": "false"
+        }
+      ],
+      "type": "select",
+      "layout": {
+        "row": "Row_180129u",
+        "columns": null
+      },
+      "id": "Field_0jg2wzz",
+      "key": "sufficient",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Material qty",
+      "type": "number",
+      "layout": {
+        "row": "Row_1u8mgu4",
+        "columns": null
+      },
+      "id": "Field_1hszwfp",
+      "key": "material_qty",
+      "validate": {
+        "min": "0"
+      }
+    }
+  ],
+  "type": "default",
+  "id": "material_receipt_and_control",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.40.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.24.0",
+  "schemaVersion": 19
+}

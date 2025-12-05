@@ -1,6 +1,6 @@
 services:
   camunda:
-    build: ./camunda  # ← Changed from "image: camunda/camunda-bpm-platform:run-latest"
+    build: ./camunda
     container_name: camunda
     ports:
       - "9091:8080"
@@ -10,6 +10,8 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    networks:
+      - circuloos_circuloos
 
   mailpit:
     image: axllent/mailpit:latest
@@ -18,6 +20,8 @@ services:
       - "8025:8025"
       - "1025:1025"
     restart: unless-stopped
+    networks:
+      - circuloos_circuloos
 
   worker:
     build: .
@@ -28,6 +32,9 @@ services:
       mailpit:
         condition: service_started
     environment:
+      # These URLs point to services on the external circuloos network:
+      # KC_TOKEN_URL: https://circuloos-platform.eurodyn.com/...
+      # ORION_BASE_URL: https://circuloos-platform.eurodyn.com/...
       CAMUNDA_REST_BASE_URL: http://camunda:8080/engine-rest
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
@@ -40,3 +47,12 @@ services:
     ports:
       - "9092:8080"
     restart: unless-stopped
+    # 3. CRITICAL: Add network connection to worker
+    networks:
+      - circuloos_circuloos
+
+# 4. Define the network as external
+networks:
+  circuloos_circuloos:
+    external: true
+    name: circuloos_circuloos
